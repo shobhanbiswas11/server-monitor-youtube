@@ -1,9 +1,11 @@
+import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.spec.ts'],
     exclude: ['node_modules', 'dist', 'test'],
     coverage: {
@@ -22,4 +24,5 @@ export default defineConfig({
       ],
     },
   },
+  plugins: [swc.vite()],
 });
