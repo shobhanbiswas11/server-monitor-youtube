@@ -25,8 +25,8 @@ export class UsersService {
     return this.repo.findOneBy({ id });
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    const user = this.repo.findOneBy({ id });
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.repo.findOneBy({ id });
     if (!user) {
       throw new NotFoundException('User not found');
     }
