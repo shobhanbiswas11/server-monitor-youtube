@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
 import { RemoteServersModule } from './remote-servers/remote-servers.module';
 import { AuthModule } from './auth/auth.module';
+import { LogSourcesModule } from './log-sources/log-sources.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
     RemoteServersModule,
     AuthModule,
+    LogSourcesModule,
   ],
   controllers: [AppController],
 })
