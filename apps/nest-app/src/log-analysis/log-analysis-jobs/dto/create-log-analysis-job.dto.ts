@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
 import { LogAnalysisJobType } from '../entities/log-analysis-job.entity';
 
 export class CreateLogAnalysisJobDto {
@@ -11,6 +11,10 @@ export class CreateLogAnalysisJobDto {
 
   @IsEnum(LogAnalysisJobType)
   type: LogAnalysisJobType;
+
+  @IsObject()
+  @IsOptional()
+  ticketingSystemConfig?: Record<string, any>;
 
   @IsString()
   @IsOptional()

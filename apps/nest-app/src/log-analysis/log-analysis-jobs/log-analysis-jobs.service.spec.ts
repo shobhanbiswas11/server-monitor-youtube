@@ -60,6 +60,10 @@ describe('LogAnalysisJobsService', () => {
       const createDto: CreateLogAnalysisJobDto = {
         name: 'test',
         type: LogAnalysisJobType.ONE_TIME,
+        description: 'test description',
+        ticketingSystemConfig: {
+          apiKey: 'api-key',
+        },
         logSourceId: 'log-source-1',
         remoteServerId: 'remote-server-1',
       };
