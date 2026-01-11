@@ -5,6 +5,7 @@ import { UsersModule } from './users/users.module';
 import { RemoteServersModule } from './remote-servers/remote-servers.module';
 import { AuthModule } from './auth/auth.module';
 import { LogSourcesModule } from './log-sources/log-sources.module';
+import { LogAnalysisModule } from './log-analysis/log-analysis.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LogSourcesModule } from './log-sources/log-sources.module';
     RemoteServersModule,
     AuthModule,
     LogSourcesModule,
+    LogAnalysisModule,
   ],
   controllers: [AppController],
 })
