@@ -8,5 +8,6 @@ import { RemoteServersService } from './remote-servers.service';
   imports: [TypeOrmModule.forFeature([RemoteServer])],
   controllers: [RemoteServersController],
   providers: [RemoteServersService],
+  exports: [RemoteServersService],
 })
 export class RemoteServersModule {}

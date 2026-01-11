@@ -22,7 +22,6 @@ export class RemoteServersController {
     @Body() createRemoteServerDto: CreateRemoteServerDto,
     @CurrentUser() currentUser: ICurrentUser,
   ) {
-    console.log(currentUser);
     return this.remoteServersService.create(
       createRemoteServerDto,
       currentUser.id,

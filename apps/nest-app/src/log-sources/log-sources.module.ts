@@ -8,5 +8,6 @@ import { LogSourcesService } from './log-sources.service';
   imports: [TypeOrmModule.forFeature([LogSource])],
   controllers: [LogSourcesController],
   providers: [LogSourcesService],
+  exports: [LogSourcesService],
 })
 export class LogSourcesModule {}
