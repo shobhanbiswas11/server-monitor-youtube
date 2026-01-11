@@ -4,9 +4,11 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto';
 import {
   LogAnalysisJob,
   LogAnalysisJobStatus,
+  LogAnalysisJobType,
 } from './entities/log-analysis-job.entity';
 import { LogAnalysisJobsService } from './log-analysis-jobs.service';
 
@@ -55,44 +57,66 @@ describe('LogAnalysisJobsService', () => {
   describe('create', () => {
     it('should create a log analysis job', async () => {
       // Arrange
-      const props = {
+      const createDto: CreateLogAnalysisJobDto = {
+        name: 'test',
+        type: LogAnalysisJobType.ONE_TIME,
         logSourceId: 'log-source-1',
         remoteServerId: 'remote-server-1',
-      } as any;
-      const logSource = {} as any;
-      const remoteServer = {} as any;
+      };
+
       const createdJob = {} as any;
       const savedJob = {} as any;
-      logSourcesService.getById.mockResolvedValue(logSource);
-      remoteServersService.getById.mockResolvedValue(remoteServer);
       repo.create.mockReturnValue(createdJob);
       repo.save.mockResolvedValue(savedJob);
 
+      logSourcesService.findOne.mockResolvedValue('log-source' as any);
+      remoteServersService.findOne.mockResolvedValue('remote-server' as any);
       // Act
-      const result = await service.create(props, 'owner-1');
+      const result = await service.create(createDto, 'owner-1');
 
       // Assert
-      expect(logSourcesService.getById).toHaveBeenCalledTimes(1);
-      expect(logSourcesService.getById).toHaveBeenCalledWith(
+      expect(logSourcesService.findOne).toHaveBeenCalledTimes(1);
+      expect(logSourcesService.findOne).toHaveBeenCalledWith(
         'log-source-1',
         'owner-1',
       );
-      expect(remoteServersService.getById).toHaveBeenCalledTimes(1);
-      expect(remoteServersService.getById).toHaveBeenCalledWith(
+      expect(remoteServersService.findOne).toHaveBeenCalledTimes(1);
+      expect(remoteServersService.findOne).toHaveBeenCalledWith(
         'remote-server-1',
         'owner-1',
       );
       expect(repo.create).toHaveBeenCalledTimes(1);
       expect(repo.create).toHaveBeenCalledWith({
-        ...props,
+        ...createDto,
         ownerId: 'owner-1',
         status: LogAnalysisJobStatus.INITIALIZED,
-        logSource,
-        remoteServer,
+        logSource: 'log-source' as any,
+        remoteServer: 'remote-server' as any,
       });
       expect(repo.save).toHaveBeenCalledTimes(1);
       expect(repo.save).toHaveBeenCalledWith(createdJob);
       expect(result).toEqual(savedJob);
+    });
+
+    it('should not throw error if log source is not provided', async () => {
+      // Arrange
+      const createDto: CreateLogAnalysisJobDto = {
+        name: 'test',
+        type: LogAnalysisJobType.ONE_TIME,
+        remoteServerId: 'remote-server-1',
+      };
+
+      const createdJob = {} as any;
+      const savedJob = {} as any;
+      repo.create.mockReturnValue(createdJob);
+      repo.save.mockResolvedValue(savedJob);
+      remoteServersService.findOne.mockResolvedValue('remote-server' as any);
+
+      // Act
+      await service.create(createDto, 'owner-1');
+
+      // Assert
+      expect(logSourcesService.findOne).toHaveBeenCalledTimes(0);
     });
   });
 

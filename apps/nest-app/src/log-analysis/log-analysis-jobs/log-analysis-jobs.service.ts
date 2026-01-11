@@ -1,6 +1,10 @@
 import { LogSourcesService } from '@/log-sources/log-sources.service';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto';
@@ -20,20 +24,23 @@ export class LogAnalysisJobsService {
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
-    const logSource = await this.logSourcesService.getById(
-      props.logSourceId,
-      ownerId,
-    );
-    const remoteServer = await this.remoteServersService.getById(
+    const remoteServer = await this.remoteServersService.findOne(
       props.remoteServerId,
       ownerId,
     );
+    if (!remoteServer) {
+      throw new BadRequestException('Remote server not found');
+    }
+
+    const logSource = props.logSourceId
+      ? await this.logSourcesService.findOne(props.logSourceId, ownerId)
+      : null;
 
     const logAnalysisJob = this.repo.create({
       ...props,
       ownerId,
       status: LogAnalysisJobStatus.INITIALIZED,
-      logSource,
+      logSource: logSource ?? undefined,
       remoteServer,
     });
     return this.repo.save(logAnalysisJob);
