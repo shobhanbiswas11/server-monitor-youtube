@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   dummy-log-generator:
     build:
@@ -12,13 +10,13 @@ services:
       # Node.js app configuration
       - PORT=3001
       - NODE_ENV=production
-      
+
       # Fluent Bit HTTP output configuration
-      - HTTP_OUTPUT_HOST=${HTTP_OUTPUT_HOST:-localhost}
-      - HTTP_OUTPUT_PORT=${HTTP_OUTPUT_PORT:-3000}
-      - HTTP_OUTPUT_URI=${HTTP_OUTPUT_URI:-/api/logs/ingest}
-      - HTTP_OUTPUT_TLS=${HTTP_OUTPUT_TLS:-Off}
-      - HTTP_OUTPUT_TLS_VERIFY=${HTTP_OUTPUT_TLS_VERIFY:-Off}
+      - HTTP_OUTPUT_HOST=host.docker.internal
+      - HTTP_OUTPUT_PORT=3000
+      - HTTP_OUTPUT_URI=/log-analysis/ingest/job-123
+      - HTTP_OUTPUT_TLS=Off
+      - HTTP_OUTPUT_TLS_VERIFY=Off
     volumes:
       # Mount logs directory to persist logs (optional)
       - ./logs:/app/logs
