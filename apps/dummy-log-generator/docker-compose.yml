@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  dummy-log-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dummy-log-generator
+    ports:
+      - "3001:3001"
+    environment:
+      # Node.js app configuration
+      - PORT=3001
+      - NODE_ENV=production
+      
+      # Fluent Bit HTTP output configuration
+      - HTTP_OUTPUT_HOST=${HTTP_OUTPUT_HOST:-localhost}
+      - HTTP_OUTPUT_PORT=${HTTP_OUTPUT_PORT:-3000}
+      - HTTP_OUTPUT_URI=${HTTP_OUTPUT_URI:-/api/logs/ingest}
+      - HTTP_OUTPUT_TLS=${HTTP_OUTPUT_TLS:-Off}
+      - HTTP_OUTPUT_TLS_VERIFY=${HTTP_OUTPUT_TLS_VERIFY:-Off}
+    volumes:
+      # Mount logs directory to persist logs (optional)
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - log-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  log-network:
+    driver: bridge
