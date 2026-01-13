@@ -6,9 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto';
 import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto';
+import { Anomaly, AnomalyStatus } from './entities/anomaly.entity';
 import {
   LogAnalysisJob,
   LogAnalysisJobStatus,
@@ -21,6 +22,8 @@ export class LogAnalysisJobsService {
     private repo: Repository<LogAnalysisJob>,
     private logSourcesService: LogSourcesService,
     private remoteServersService: RemoteServersService,
+    @InjectRepository(Anomaly)
+    private anomalyRepo: Repository<Anomaly>,
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
@@ -74,5 +77,34 @@ export class LogAnalysisJobsService {
   async remove(id: string, ownerId: string) {
     await this.getById(id, ownerId);
     return this.repo.delete({ id, ownerId });
+  }
+
+  async addAnomaly(
+    job: LogAnalysisJob,
+    {
+      title,
+      description,
+      severity,
+    }: Partial<Anomaly> & Pick<Anomaly, 'title' | 'severity' | 'description'>,
+  ) {
+    const existingAnomaly = await this.anomalyRepo.findOne({
+      where: {
+        logAnalysisJob: { id: job.id },
+        status: In([AnomalyStatus.OPEN, AnomalyStatus.IN_PROGRESS]),
+      },
+    });
+
+    if (existingAnomaly) {
+      return;
+    }
+
+    const anomaly = this.anomalyRepo.create({
+      logAnalysisJob: job,
+      status: AnomalyStatus.OPEN,
+      title,
+      description,
+      severity,
+    });
+    await this.anomalyRepo.save(anomaly);
   }
 }
