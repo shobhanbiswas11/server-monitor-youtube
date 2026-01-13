@@ -15,5 +15,6 @@ import { LogAnalysisJobsService } from './log-analysis-jobs.service';
   ],
   controllers: [LogAnalysisJobsController],
   providers: [LogAnalysisJobsService],
+  exports: [LogAnalysisJobsService],
 })
 export class LogAnalysisJobsModule {}
