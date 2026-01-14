@@ -20,7 +20,7 @@ export class LogAnalysisService {
       const message = log['message'] || 'Untitled Log Message';
       const level = log['level'] || 'error';
 
-      this.logAnalysisJobsService.addAnomaly(job, {
+      await this.logAnalysisJobsService.addAnomaly(job, {
         title: message,
         severity:
           level === 'critical'

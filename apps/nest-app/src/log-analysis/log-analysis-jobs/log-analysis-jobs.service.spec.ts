@@ -1,6 +1,7 @@
 import { LogSourcesService } from '@/log-sources/log-sources.service';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
 import { NotFoundException } from '@nestjs/common';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -43,6 +44,10 @@ describe('LogAnalysisJobsService', () => {
         {
           provide: getRepositoryToken(Anomaly),
           useValue: mock<Repository<Anomaly>>(),
+        },
+        {
+          provide: EventEmitter,
+          useValue: mock<EventEmitter>(),
         },
       ],
     }).compile();

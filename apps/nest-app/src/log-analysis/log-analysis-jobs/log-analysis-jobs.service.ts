@@ -1,10 +1,12 @@
 import { LogSourcesService } from '@/log-sources/log-sources.service';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
+import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto';
@@ -24,6 +26,7 @@ export class LogAnalysisJobsService {
     private remoteServersService: RemoteServersService,
     @InjectRepository(Anomaly)
     private anomalyRepo: Repository<Anomaly>,
+    private eventEmitter: EventEmitter,
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
@@ -106,5 +109,13 @@ export class LogAnalysisJobsService {
       severity,
     });
     await this.anomalyRepo.save(anomaly);
+
+    this.eventEmitter.emit(
+      AnomalyCreatedEvent.name,
+      new AnomalyCreatedEvent({
+        anomaly,
+        job,
+      }),
+    );
   }
 }
