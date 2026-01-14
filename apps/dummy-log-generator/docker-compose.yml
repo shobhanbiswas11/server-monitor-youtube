@@ -14,7 +14,7 @@ services:
       # Fluent Bit HTTP output configuration
       - HTTP_OUTPUT_HOST=host.docker.internal
       - HTTP_OUTPUT_PORT=3000
-      - HTTP_OUTPUT_URI=/log-analysis/ingest/job-123
+      - HTTP_OUTPUT_URI=/log-analysis/ingest/${LOG_ANALYSIS_JOB_ID}
       - HTTP_OUTPUT_TLS=Off
       - HTTP_OUTPUT_TLS_VERIFY=Off
     volumes:
