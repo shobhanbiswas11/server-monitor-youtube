@@ -1,5 +1,6 @@
 import { LogSourcesService } from '@/log-sources/log-sources.service';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
+import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
 import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -24,6 +25,7 @@ describe('LogAnalysisJobsService', () => {
   let logSourcesService: Mocked<LogSourcesService>;
   let remoteServersService: Mocked<RemoteServersService>;
   let anomalyRepo: Mocked<Repository<Anomaly>>;
+  let eventEmitter: Mocked<EventEmitter>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -63,6 +65,7 @@ describe('LogAnalysisJobsService', () => {
     anomalyRepo = module.get<Mocked<Repository<Anomaly>>>(
       getRepositoryToken(Anomaly),
     );
+    eventEmitter = module.get<Mocked<EventEmitter>>(EventEmitter);
   });
 
   it('should be defined', () => {
@@ -313,6 +316,7 @@ describe('LogAnalysisJobsService', () => {
       });
       expect(anomalyRepo.create).not.toHaveBeenCalled();
       expect(anomalyRepo.save).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should return without creating an anomaly if existing anomaly with status IN_PROGRESS exists', async () => {
@@ -336,6 +340,7 @@ describe('LogAnalysisJobsService', () => {
       });
       expect(anomalyRepo.create).not.toHaveBeenCalled();
       expect(anomalyRepo.save).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should create and save an anomaly with appropriate fields when no existing anomaly exists', async () => {
@@ -371,6 +376,38 @@ describe('LogAnalysisJobsService', () => {
       });
       expect(anomalyRepo.save).toHaveBeenCalledTimes(1);
       expect(anomalyRepo.save).toHaveBeenCalledWith(createdAnomaly);
+    });
+
+    it('should emit AnomalyCreatedEvent when an anomaly is created', async () => {
+      // Arrange
+      const mockJobWithOwner = {
+        id: 'job-1',
+        ownerId: 'owner-1',
+      } as LogAnalysisJob;
+      anomalyRepo.findOne.mockResolvedValue(null);
+      const createdAnomaly = {
+        id: 'anomaly-1',
+        ...anomalyData,
+        status: AnomalyStatus.OPEN,
+        logAnalysisJob: mockJobWithOwner,
+      } as Anomaly;
+      anomalyRepo.create.mockReturnValue(createdAnomaly);
+      anomalyRepo.save.mockResolvedValue(createdAnomaly);
+
+      // Act
+      await service.addAnomaly(mockJobWithOwner, anomalyData);
+
+      // Assert
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AnomalyCreatedEvent.name,
+        expect.any(AnomalyCreatedEvent),
+      );
+      const emittedEvent = eventEmitter.emit.mock
+        .calls[0][1] as AnomalyCreatedEvent;
+      expect(emittedEvent.payload.ownerId).toBe('owner-1');
+      expect(emittedEvent.payload.jobId).toBe('job-1');
+      expect(emittedEvent.payload.anomalyId).toBe('anomaly-1');
     });
   });
 });

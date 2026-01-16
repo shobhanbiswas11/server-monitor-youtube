@@ -1,4 +1,8 @@
-import { AnomalySeverity } from '@/log-analysis/log-analysis-jobs/entities/anomaly.entity';
+import {
+  AnomalySeverity,
+  AnomalyStatus,
+} from '@/log-analysis/log-analysis-jobs/entities/anomaly.entity';
+import { LogAnalysisJobsService } from '@/log-analysis/log-analysis-jobs/log-analysis-jobs.service';
 import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -9,17 +13,27 @@ import { TicketSeverity } from './ticketing.types';
 export class TicketingService {
   constructor(
     private readonly ticketingProviderFactory: TicketingProviderFactory,
+    private readonly logAnalysisJobsService: LogAnalysisJobsService,
   ) {}
 
   @OnEvent(AnomalyCreatedEvent.name)
-  handleAnomalyCreatedEvent(event: AnomalyCreatedEvent) {
-    const providerConfig = event.payload.job.ticketingSystemConfig;
-    const anomaly = event.payload.anomaly;
+  async handleAnomalyCreatedEvent(event: AnomalyCreatedEvent) {
+    const { anomalyId, jobId, ownerId } = event.payload;
 
-    if (!providerConfig?.providerType) {
+    const providerConfig =
+      await this.logAnalysisJobsService.getTicketingSystemConfig(jobId);
+    // If provider config & type is not set, return early
+    if (!providerConfig?.type) {
       return;
     }
+
     const provider = this.ticketingProviderFactory.create(providerConfig);
+    const anomaly = await this.logAnalysisJobsService.getAnomaly(anomalyId);
+
+    if (!anomaly || anomaly.status !== AnomalyStatus.OPEN) {
+      return;
+    }
+
     return provider.createTicket({
       title: anomaly.title,
       description: anomaly.description,
