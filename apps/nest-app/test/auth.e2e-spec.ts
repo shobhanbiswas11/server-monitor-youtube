@@ -3,12 +3,13 @@ import { DatabaseModule } from '@/database/database.module';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { resetDatabase } from './test-utils';
 
-describe('AppController (e2e)', () => {
+describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let moduleFixture: TestingModule;
@@ -31,7 +32,11 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('should be defined', () => {
-    expect(app).toBeDefined();
+  it('should return the current user', () => {
+    return request(app.getHttpServer()).get('/auth/me').expect(200).expect({
+      id: 'default-user-1',
+      name: 'Default User 1',
+      email: 'default-user-1@example.com',
+    });
   });
 });
