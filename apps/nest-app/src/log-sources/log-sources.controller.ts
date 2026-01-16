@@ -1,3 +1,5 @@
+import { CurrentUser } from '@/auth/current-user.decorator';
+import type { ICurrentUser } from '@/auth/current-user.interface';
 import {
   Body,
   Controller,
@@ -7,8 +9,6 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { CurrentUser } from 'src/auth/current-user.decorator';
-import type { ICurrentUser } from 'src/auth/current-user.interface';
 import { CreateLogSourceDto } from './dto/create-log-source.dto';
 import { UpdateLogSourceDto } from './dto/update-log-source.dto';
 import { LogSourcesService } from './log-sources.service';

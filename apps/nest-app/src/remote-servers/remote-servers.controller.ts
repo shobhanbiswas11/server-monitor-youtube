@@ -1,3 +1,5 @@
+import { CurrentUser } from '@/auth/current-user.decorator';
+import { ICurrentUser } from '@/auth/current-user.interface';
 import {
   Body,
   Controller,
@@ -7,8 +9,6 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { CurrentUser } from 'src/auth/current-user.decorator';
-import { ICurrentUser } from 'src/auth/current-user.interface';
 import { CreateRemoteServerDto } from './dto/create-remote-server.dto';
 import { UpdateRemoteServerDto } from './dto/update-remote-server.dto';
 import { RemoteServersService } from './remote-servers.service';
