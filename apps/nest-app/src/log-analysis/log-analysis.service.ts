@@ -4,7 +4,8 @@ import { LogAnalysisJobsService } from './log-analysis-jobs/log-analysis-jobs.se
 
 @Injectable()
 export class LogAnalysisService {
-  constructor(private logAnalysisJobsService: LogAnalysisJobsService) {}
+  constructor(private logAnalysisJobsService: LogAnalysisJobsService) { }
+
 
   async ingestLogs(
     jobId: string,
@@ -22,6 +23,7 @@ export class LogAnalysisService {
 
       await this.logAnalysisJobsService.addAnomaly(job, {
         title: message,
+        description: JSON.stringify(log),
         severity:
           level === 'critical'
             ? AnomalySeverity.CRITICAL
