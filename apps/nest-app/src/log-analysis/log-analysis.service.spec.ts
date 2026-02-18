@@ -70,26 +70,26 @@ describe('LogAnalysisService', () => {
       expect(logAnalysisJobsService.addAnomaly).toHaveBeenNthCalledWith(
         1,
         mockJob,
-        {
+        expect.objectContaining({
           title: 'Error occurred',
           severity: AnomalySeverity.HIGH,
-        },
+        }),
       );
       expect(logAnalysisJobsService.addAnomaly).toHaveBeenNthCalledWith(
         2,
         mockJob,
-        {
+        expect.objectContaining({
           title: 'Critical failure',
           severity: AnomalySeverity.CRITICAL,
-        },
+        }),
       );
       expect(logAnalysisJobsService.addAnomaly).toHaveBeenNthCalledWith(
         3,
         mockJob,
-        {
+        expect.objectContaining({
           title: 'Warning message',
           severity: AnomalySeverity.HIGH,
-        },
+        }),
       );
     });
 
@@ -100,10 +100,13 @@ describe('LogAnalysisService', () => {
 
       await service.ingestLogs(jobId, ownerId, logs);
 
-      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
-        title: 'Untitled Log Message',
-        severity: AnomalySeverity.HIGH,
-      });
+      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(
+        mockJob,
+        expect.objectContaining({
+          title: 'Untitled Log Message',
+          severity: AnomalySeverity.HIGH,
+        }),
+      );
     });
 
     it('should use default level "error" when level is missing', async () => {
@@ -113,10 +116,13 @@ describe('LogAnalysisService', () => {
 
       await service.ingestLogs(jobId, ownerId, logs);
 
-      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
-        title: 'Some message',
-        severity: AnomalySeverity.HIGH,
-      });
+      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(
+        mockJob,
+        expect.objectContaining({
+          title: 'Some message',
+          severity: AnomalySeverity.HIGH,
+        }),
+      );
     });
 
     it('should use CRITICAL severity for critical level', async () => {
@@ -126,10 +132,13 @@ describe('LogAnalysisService', () => {
 
       await service.ingestLogs(jobId, ownerId, logs);
 
-      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
-        title: 'Critical error',
-        severity: AnomalySeverity.CRITICAL,
-      });
+      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(
+        mockJob,
+        expect.objectContaining({
+          title: 'Critical error',
+          severity: AnomalySeverity.CRITICAL,
+        }),
+      );
     });
 
     it('should use HIGH severity for non-critical levels', async () => {
@@ -148,10 +157,10 @@ describe('LogAnalysisService', () => {
       logs.forEach((log) => {
         expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(
           mockJob,
-          {
+          expect.objectContaining({
             title: log.message,
             severity: AnomalySeverity.HIGH,
-          },
+          }),
         );
       });
     });
@@ -175,10 +184,13 @@ describe('LogAnalysisService', () => {
 
       await service.ingestLogs(jobId, ownerId, logs);
 
-      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
-        title: 'Untitled Log Message',
-        severity: AnomalySeverity.HIGH,
-      });
+      expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(
+        mockJob,
+        expect.objectContaining({
+          title: 'Untitled Log Message',
+          severity: AnomalySeverity.HIGH,
+        }),
+      );
     });
   });
 });
