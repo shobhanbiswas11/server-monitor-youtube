@@ -1,11 +1,7 @@
 import { LogSourcesService } from '@/log-sources/log-sources.service';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
 import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -50,7 +46,10 @@ export class LogAnalysisJobsService {
     return job?.ticketingSystemConfig;
   }
 
-  async create(props: CreateLogAnalysisJobDto, ownerId: string) {
+  async create(
+    props: CreateLogAnalysisJobDto,
+    ownerId: string,
+  ): Promise<LogAnalysisJob> {
     const remoteServer = await this.remoteServersService.findOne(
       props.remoteServerId,
       ownerId,
@@ -63,30 +62,21 @@ export class LogAnalysisJobsService {
       ? await this.logSourcesService.findOne(props.logSourceId, ownerId)
       : null;
 
-    const logAnalysisJob = this.repo.create({
+    return this.repo.save({
       ...props,
       ownerId,
       status: LogAnalysisJobStatus.INITIALIZED,
       logSource: logSource ?? undefined,
       remoteServer,
     });
-    return this.repo.save(logAnalysisJob);
   }
 
-  findAll(ownerId: string) {
+  findAll(ownerId: string): Promise<LogAnalysisJob[]> {
     return this.repo.find({ where: { ownerId } });
   }
 
-  findOne(id: string, ownerId: string) {
-    return this.repo.findOneBy({ id, ownerId });
-  }
-
-  async getById(id: string, ownerId: string) {
-    const logAnalysisJob = await this.findOne(id, ownerId);
-    if (!logAnalysisJob) {
-      throw new NotFoundException('Log analysis job not found');
-    }
-    return logAnalysisJob;
+  findOne(id: string, ownerId: string): Promise<LogAnalysisJob> {
+    return this.repo.findOneByOrFail({ id, ownerId });
   }
 
   async update(
@@ -94,12 +84,10 @@ export class LogAnalysisJobsService {
     updateLogAnalysisJobDto: UpdateLogAnalysisJobDto,
     ownerId: string,
   ) {
-    const logAnalysisJob = await this.getById(id, ownerId);
-    return this.repo.save({ ...logAnalysisJob, ...updateLogAnalysisJobDto });
+    return this.repo.update({ id, ownerId }, updateLogAnalysisJobDto);
   }
 
   async remove(id: string, ownerId: string) {
-    await this.getById(id, ownerId);
     return this.repo.delete({ id, ownerId });
   }
 

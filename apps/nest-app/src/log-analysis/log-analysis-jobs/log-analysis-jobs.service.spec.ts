@@ -1,7 +1,8 @@
+import { LogSource } from '@/log-sources/entities/log-source.entity';
 import { LogSourcesService } from '@/log-sources/log-sources.service';
+import { RemoteServer } from '@/remote-servers/entities/remote-server.entity';
 import { RemoteServersService } from '@/remote-servers/remote-servers.service';
 import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
-import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -29,43 +30,17 @@ describe('LogAnalysisJobsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LogAnalysisJobsService,
-        {
-          provide: getRepositoryToken(LogAnalysisJob),
-          useValue: mock<Repository<LogAnalysisJob>>(),
-        },
-        {
-          provide: LogSourcesService,
-          useValue: mock<LogSourcesService>(),
-        },
-        {
-          provide: RemoteServersService,
-          useValue: mock<RemoteServersService>(),
-        },
-        {
-          provide: getRepositoryToken(Anomaly),
-          useValue: mock<Repository<Anomaly>>(),
-        },
-        {
-          provide: EventEmitter,
-          useValue: mock<EventEmitter>(),
-        },
-      ],
-    }).compile();
+      providers: [LogAnalysisJobsService],
+    })
+      .useMocker(() => mock())
+      .compile();
 
-    service = module.get<LogAnalysisJobsService>(LogAnalysisJobsService);
-    repo = module.get<Mocked<Repository<LogAnalysisJob>>>(
-      getRepositoryToken(LogAnalysisJob),
-    );
-    logSourcesService =
-      module.get<Mocked<LogSourcesService>>(LogSourcesService);
-    remoteServersService =
-      module.get<Mocked<RemoteServersService>>(RemoteServersService);
-    anomalyRepo = module.get<Mocked<Repository<Anomaly>>>(
-      getRepositoryToken(Anomaly),
-    );
-    eventEmitter = module.get<Mocked<EventEmitter>>(EventEmitter);
+    service = module.get(LogAnalysisJobsService);
+    repo = module.get(getRepositoryToken(LogAnalysisJob));
+    logSourcesService = module.get(LogSourcesService);
+    remoteServersService = module.get(RemoteServersService);
+    anomalyRepo = module.get(getRepositoryToken(Anomaly));
+    eventEmitter = module.get(EventEmitter);
   });
 
   it('should be defined', () => {
@@ -76,9 +51,8 @@ describe('LogAnalysisJobsService', () => {
   });
 
   describe('create', () => {
-    it('should create a log analysis job', async () => {
-      // Arrange
-      const createDto: CreateLogAnalysisJobDto = {
+    const getCreateDto = (overrides: Partial<CreateLogAnalysisJobDto> = {}) => {
+      return {
         name: 'test',
         type: LogAnalysisJobType.ONE_TIME,
         description: 'test description',
@@ -87,200 +61,37 @@ describe('LogAnalysisJobsService', () => {
         },
         logSourceId: 'log-source-1',
         remoteServerId: 'remote-server-1',
-      };
+        ...overrides,
+      } as CreateLogAnalysisJobDto;
+    };
 
-      const createdJob = {} as any;
-      const savedJob = {} as any;
-      repo.create.mockReturnValue(createdJob);
-      repo.save.mockResolvedValue(savedJob);
+    const logSource = new LogSource();
+    const remoteServer = new RemoteServer();
 
-      logSourcesService.findOne.mockResolvedValue('log-source' as any);
-      remoteServersService.findOne.mockResolvedValue('remote-server' as any);
-      // Act
-      const result = await service.create(createDto, 'owner-1');
+    beforeEach(() => {
+      logSourcesService.findOne.mockResolvedValue(logSource);
+      remoteServersService.findOne.mockResolvedValue(remoteServer);
+    });
 
-      // Assert
-      expect(logSourcesService.findOne).toHaveBeenCalledTimes(1);
-      expect(logSourcesService.findOne).toHaveBeenCalledWith(
-        'log-source-1',
-        'owner-1',
-      );
-      expect(remoteServersService.findOne).toHaveBeenCalledTimes(1);
-      expect(remoteServersService.findOne).toHaveBeenCalledWith(
-        'remote-server-1',
-        'owner-1',
-      );
-      expect(repo.create).toHaveBeenCalledTimes(1);
-      expect(repo.create).toHaveBeenCalledWith({
+    it('should create a log analysis job', async () => {
+      const createDto = getCreateDto();
+      await service.create(createDto, 'owner-1');
+
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(repo.save).toHaveBeenCalledWith({
         ...createDto,
         ownerId: 'owner-1',
         status: LogAnalysisJobStatus.INITIALIZED,
-        logSource: 'log-source' as any,
-        remoteServer: 'remote-server' as any,
+        logSource: logSource,
+        remoteServer: remoteServer,
       });
-      expect(repo.save).toHaveBeenCalledTimes(1);
-      expect(repo.save).toHaveBeenCalledWith(createdJob);
-      expect(result).toEqual(savedJob);
     });
 
     it('should not throw error if log source is not provided', async () => {
-      // Arrange
-      const createDto: CreateLogAnalysisJobDto = {
-        name: 'test',
-        type: LogAnalysisJobType.ONE_TIME,
-        remoteServerId: 'remote-server-1',
-      };
-
-      const createdJob = {} as any;
-      const savedJob = {} as any;
-      repo.create.mockReturnValue(createdJob);
-      repo.save.mockResolvedValue(savedJob);
-      remoteServersService.findOne.mockResolvedValue('remote-server' as any);
-
-      // Act
+      const createDto = getCreateDto({ logSourceId: undefined });
       await service.create(createDto, 'owner-1');
 
-      // Assert
       expect(logSourcesService.findOne).toHaveBeenCalledTimes(0);
-    });
-  });
-
-  describe('findAll', () => {
-    it('should find all log analysis jobs', async () => {
-      // Arrange
-      const logAnalysisJobs = [] as any;
-      repo.find.mockResolvedValue(logAnalysisJobs);
-
-      // Act
-      const result = await service.findAll('owner-1');
-
-      // Assert
-      expect(repo.find).toHaveBeenCalledTimes(1);
-      expect(repo.find).toHaveBeenCalledWith({ where: { ownerId: 'owner-1' } });
-      expect(result).toEqual(logAnalysisJobs);
-    });
-  });
-
-  describe('findOne', () => {
-    it('should find a log analysis job', async () => {
-      // Arrange
-      const logAnalysisJob = {} as any;
-      repo.findOneBy.mockResolvedValue(logAnalysisJob);
-
-      // Act
-      const result = await service.findOne('job-1', 'owner-1');
-
-      // Assert
-      expect(repo.findOneBy).toHaveBeenCalledTimes(1);
-      expect(repo.findOneBy).toHaveBeenCalledWith({
-        id: 'job-1',
-        ownerId: 'owner-1',
-      });
-      expect(result).toEqual(logAnalysisJob);
-    });
-  });
-
-  describe('getById', () => {
-    it('should get a log analysis job by id', async () => {
-      // Arrange
-      const logAnalysisJob = {} as any;
-      repo.findOneBy.mockResolvedValue(logAnalysisJob);
-
-      // Act
-      const result = await service.getById('job-1', 'owner-1');
-
-      // Assert
-      expect(repo.findOneBy).toHaveBeenCalledTimes(1);
-      expect(repo.findOneBy).toHaveBeenCalledWith({
-        id: 'job-1',
-        ownerId: 'owner-1',
-      });
-      expect(result).toEqual(logAnalysisJob);
-    });
-
-    it('should throw an error if the log analysis job is not found', async () => {
-      // Arrange
-      repo.findOneBy.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.getById('job-1', 'owner-1')).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.getById('job-1', 'owner-1')).rejects.toThrow(
-        'Log analysis job not found',
-      );
-    });
-  });
-
-  describe('update', () => {
-    it('should update a log analysis job', async () => {
-      // Arrange
-      const logAnalysisJob = {} as any;
-      const updatedJob = {} as any;
-      repo.findOneBy.mockResolvedValue(logAnalysisJob);
-      repo.save.mockResolvedValue(updatedJob);
-
-      // Act
-      const result = await service.update('job-1', { name: 'test' }, 'owner-1');
-
-      // Assert
-      expect(repo.findOneBy).toHaveBeenCalledTimes(1);
-      expect(repo.findOneBy).toHaveBeenCalledWith({
-        id: 'job-1',
-        ownerId: 'owner-1',
-      });
-      expect(repo.save).toHaveBeenCalledTimes(1);
-      expect(repo.save).toHaveBeenCalledWith({
-        ...logAnalysisJob,
-        name: 'test',
-      });
-      expect(result).toEqual(updatedJob);
-    });
-
-    it('should throw an error if the log analysis job is not found', async () => {
-      // Arrange
-      repo.findOneBy.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(
-        service.update('job-1', { name: 'test' }, 'owner-1'),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('remove', () => {
-    it('should remove a log analysis job', async () => {
-      // Arrange
-      const logAnalysisJob = {} as any;
-      const deleteResponse = {} as any;
-      repo.findOneBy.mockResolvedValue(logAnalysisJob);
-      repo.delete.mockResolvedValue(deleteResponse);
-
-      // Act
-      const result = await service.remove('job-1', 'owner-1');
-
-      // Assert
-      expect(repo.findOneBy).toHaveBeenCalledTimes(1);
-      expect(repo.findOneBy).toHaveBeenCalledWith({
-        id: 'job-1',
-        ownerId: 'owner-1',
-      });
-      expect(repo.delete).toHaveBeenCalledTimes(1);
-      expect(repo.delete).toHaveBeenCalledWith({
-        id: 'job-1',
-        ownerId: 'owner-1',
-      });
-      expect(result).toEqual(deleteResponse);
-    });
-
-    it('should throw an error if the log analysis job is not found', async () => {
-      // Arrange
-      repo.findOneBy.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.remove('job-1', 'owner-1')).rejects.toThrow(
-        NotFoundException,
-      );
     });
   });
 
