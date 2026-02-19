@@ -9,5 +9,6 @@ export class CreateRemoteServerDto {
   description?: string;
 
   @IsObject()
-  config: Record<string, any>;
+  @IsOptional()
+  config?: Record<string, any>;
 }

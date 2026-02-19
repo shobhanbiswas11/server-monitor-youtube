@@ -29,7 +29,7 @@ export class RemoteServer {
   @Column({ type: 'simple-json' })
   config: Record<string, any>;
 
-  @Column()
+  @Column({ default: RemoteServerStatus.UNKNOWN })
   status: RemoteServerStatus;
 
   @CreateDateColumn()

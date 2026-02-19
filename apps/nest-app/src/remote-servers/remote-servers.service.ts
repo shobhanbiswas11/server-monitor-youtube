@@ -1,12 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateRemoteServerDto } from './dto/create-remote-server.dto';
 import { UpdateRemoteServerDto } from './dto/update-remote-server.dto';
-import {
-  RemoteServer,
-  RemoteServerStatus,
-} from './entities/remote-server.entity';
+import { RemoteServer } from './entities/remote-server.entity';
 
 @Injectable()
 export class RemoteServersService {
@@ -15,29 +12,19 @@ export class RemoteServersService {
     private repo: Repository<RemoteServer>,
   ) {}
 
-  create(props: CreateRemoteServerDto, ownerId: string) {
-    const remoteServer = this.repo.create({
+  create(props: CreateRemoteServerDto, ownerId: string): Promise<RemoteServer> {
+    return this.repo.save({
       ...props,
       ownerId,
-      status: RemoteServerStatus.UNKNOWN,
     });
-    return this.repo.save(remoteServer);
   }
 
-  findAll(ownerId: string) {
+  findAll(ownerId: string): Promise<RemoteServer[]> {
     return this.repo.find({ where: { ownerId } });
   }
 
-  findOne(id: string, ownerId: string) {
-    return this.repo.findOneBy({ id, ownerId });
-  }
-
-  async getById(id: string, ownerId: string) {
-    const server = await this.repo.findOneBy({ id, ownerId });
-    if (!server) {
-      throw new NotFoundException('Remote server not found');
-    }
-    return server;
+  findOne(id: string, ownerId: string): Promise<RemoteServer> {
+    return this.repo.findOneByOrFail({ id, ownerId });
   }
 
   async update(
@@ -45,12 +32,10 @@ export class RemoteServersService {
     updateRemoteServerDto: UpdateRemoteServerDto,
     ownerId: string,
   ) {
-    const remoteServer = await this.getById(id, ownerId);
-    return this.repo.save({ ...remoteServer, ...updateRemoteServerDto });
+    return this.repo.update({ id, ownerId }, updateRemoteServerDto);
   }
 
   async remove(id: string, ownerId: string) {
-    const remoteServer = await this.getById(id, ownerId);
     return this.repo.delete({ id, ownerId });
   }
 }
