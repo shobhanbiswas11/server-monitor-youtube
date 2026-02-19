@@ -15,19 +15,13 @@ describe('LogAnalysisService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LogAnalysisService,
-        {
-          provide: LogAnalysisJobsService,
-          useValue: mock<LogAnalysisJobsService>(),
-        },
-      ],
-    }).compile();
+      providers: [LogAnalysisService],
+    })
+      .useMocker(() => mock())
+      .compile();
 
-    service = module.get<LogAnalysisService>(LogAnalysisService);
-    logAnalysisJobsService = module.get<Mocked<LogAnalysisJobsService>>(
-      LogAnalysisJobsService,
-    );
+    service = module.get(LogAnalysisService);
+    logAnalysisJobsService = module.get(LogAnalysisJobsService);
   });
 
   it('should be defined', () => {
@@ -39,7 +33,7 @@ describe('LogAnalysisService', () => {
     const ownerId = 'owner-1';
 
     it('should throw NotFoundException when job is not found', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(null);
+      logAnalysisJobsService.findOne.mockResolvedValue(null as any);
 
       await expect(service.ingestLogs(jobId, ownerId, [])).rejects.toThrow(
         NotFoundException,
