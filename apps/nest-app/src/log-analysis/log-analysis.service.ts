@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AnomalySeverity } from './log-analysis-jobs/entities/anomaly.entity';
 import { LogAnalysisJobsService } from './log-analysis-jobs/log-analysis-jobs.service';
 
 @Injectable()
 export class LogAnalysisService {
-  constructor(private logAnalysisJobsService: LogAnalysisJobsService) { }
-
+  constructor(private logAnalysisJobsService: LogAnalysisJobsService) {}
 
   async ingestLogs(
     jobId: string,
@@ -13,9 +12,6 @@ export class LogAnalysisService {
     logs: Array<Record<string, any>>,
   ) {
     const job = await this.logAnalysisJobsService.findOne(jobId, ownerId);
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
 
     for (const log of logs) {
       const message = log['message'] || 'Untitled Log Message';
