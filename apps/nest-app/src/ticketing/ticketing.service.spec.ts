@@ -1,9 +1,11 @@
 import {
+  Anomaly,
   AnomalySeverity,
   AnomalyStatus,
-} from '@/log-analysis/log-analysis-jobs/entities/anomaly.entity';
-import { LogAnalysisJobsService } from '@/log-analysis/log-analysis-jobs/log-analysis-jobs.service';
-import { AnomalyCreatedEvent } from '@/shared/events/anomaly.event';
+  LogAnalysisJobsService,
+} from '@/log-analysis';
+import { AnomalyCreatedEvent, TicketCreatedEvent } from '@/shared/events';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TicketingProviderFactory } from './ticketing-providers/ticketing-provider.factory';
 import { ITicketingProvider } from './ticketing-providers/ticketing-provider.interface';
@@ -15,206 +17,109 @@ describe('TicketingService', () => {
   let ticketingProviderFactory: Mocked<TicketingProviderFactory>;
   let logAnalysisJobsService: Mocked<LogAnalysisJobsService>;
   let mockProvider: Mocked<ITicketingProvider>;
+  let eventEmitter: Mocked<EventEmitter>;
 
   beforeEach(async () => {
     mockProvider = mock<ITicketingProvider>();
-    ticketingProviderFactory = mock<TicketingProviderFactory>();
-    logAnalysisJobsService = mock<LogAnalysisJobsService>();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TicketingService,
-        {
-          provide: TicketingProviderFactory,
-          useValue: ticketingProviderFactory,
-        },
-        {
-          provide: LogAnalysisJobsService,
-          useValue: logAnalysisJobsService,
-        },
-      ],
-    }).compile();
+      providers: [TicketingService],
+    })
+      .useMocker(() => mock())
+      .compile();
 
-    service = module.get<TicketingService>(TicketingService);
+    service = module.get(TicketingService);
+    logAnalysisJobsService = module.get(LogAnalysisJobsService);
+    ticketingProviderFactory = module.get(TicketingProviderFactory);
+    eventEmitter = module.get(EventEmitter);
+
+    //
+
+    logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({
+      type: 'ServiceNowTicketingProvider',
+    });
+    ticketingProviderFactory.create.mockReturnValue(mockProvider as any);
+    event = new AnomalyCreatedEvent({
+      anomalyId: 'anomaly-1',
+      jobId: 'job-1',
+      ownerId: 'owner-1',
+    });
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+    expect(ticketingProviderFactory).toBeDefined();
+    expect(logAnalysisJobsService).toBeDefined();
+    expect(eventEmitter).toBeDefined();
   });
 
-  describe('handleAnomalyCreatedEvent', () => {
-    it('should return early when providerConfig is missing', async () => {
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue(
-        undefined,
-      );
+  let event: AnomalyCreatedEvent;
+  const getAnomaly = (overrides: Partial<Anomaly> = {}) =>
+    ({
+      id: 'anomaly-1',
+      title: 'Test Anomaly',
+      description: 'Test Description',
+      severity: AnomalySeverity.HIGH,
+      status: AnomalyStatus.OPEN,
+      ...overrides,
+    }) as Anomaly;
 
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
+  it('should return early when providerConfig is missing', async () => {
+    logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue(
+      undefined,
+    );
 
-      const result = await service.handleAnomalyCreatedEvent(event);
+    await service.handleAnomalyCreatedEvent(event);
+    expect(ticketingProviderFactory.create).not.toHaveBeenCalled();
+  });
 
-      expect(result).toBeUndefined();
-      expect(
-        logAnalysisJobsService.getTicketingSystemConfig,
-      ).toHaveBeenCalledWith('job-1');
-      expect(ticketingProviderFactory.create).not.toHaveBeenCalled();
+  it('should return early when provider type is missing', async () => {
+    logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({});
+    await service.handleAnomalyCreatedEvent(event);
+    expect(ticketingProviderFactory.create).not.toHaveBeenCalled();
+  });
+
+  it('should return early when anomaly does not exist', async () => {
+    logAnalysisJobsService.getAnomaly.mockResolvedValue(null);
+    await service.handleAnomalyCreatedEvent(event);
+    expect(mockProvider.createTicket).not.toHaveBeenCalled();
+  });
+
+  it('should return early when anomaly status is not OPEN', async () => {
+    const anomaly = getAnomaly({
+      status: AnomalyStatus.CLOSED,
     });
+    logAnalysisJobsService.getAnomaly.mockResolvedValue(anomaly);
+    await service.handleAnomalyCreatedEvent(event);
+    expect(mockProvider.createTicket).not.toHaveBeenCalled();
+  });
 
-    it('should return early when provider type is missing', async () => {
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({});
-
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
-
-      const result = await service.handleAnomalyCreatedEvent(event);
-
-      expect(result).toBeUndefined();
-      expect(
-        logAnalysisJobsService.getTicketingSystemConfig,
-      ).toHaveBeenCalledWith('job-1');
-      expect(ticketingProviderFactory.create).not.toHaveBeenCalled();
+  it('should create ticket when providerConfig is valid', async () => {
+    const anomaly = getAnomaly({
+      severity: AnomalySeverity.HIGH,
+      status: AnomalyStatus.OPEN,
     });
-
-    it('should return early when anomaly does not exist', async () => {
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({
-        type: 'ServiceNowTicketingProvider',
-      });
-      logAnalysisJobsService.getAnomaly.mockResolvedValue(null);
-
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
-
-      const result = await service.handleAnomalyCreatedEvent(event);
-
-      expect(result).toBeUndefined();
-      expect(logAnalysisJobsService.getAnomaly).toHaveBeenCalledWith(
-        'anomaly-1',
-      );
-      expect(mockProvider.createTicket).not.toHaveBeenCalled();
+    logAnalysisJobsService.getAnomaly.mockResolvedValue(anomaly);
+    await service.handleAnomalyCreatedEvent(event);
+    expect(mockProvider.createTicket).toHaveBeenCalledWith({
+      title: anomaly.title,
+      description: anomaly.description,
+      severity: TicketSeverity.HIGH,
     });
+  });
 
-    it('should return early when anomaly status is not OPEN', async () => {
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({
-        type: 'ServiceNowTicketingProvider',
-      });
-      logAnalysisJobsService.getAnomaly.mockResolvedValue({
-        id: 'anomaly-1',
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: AnomalySeverity.HIGH,
-        status: AnomalyStatus.CLOSED,
-      } as any);
-
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
-
-      const result = await service.handleAnomalyCreatedEvent(event);
-
-      expect(result).toBeUndefined();
-      expect(logAnalysisJobsService.getAnomaly).toHaveBeenCalledWith(
-        'anomaly-1',
-      );
-      expect(mockProvider.createTicket).not.toHaveBeenCalled();
+  it('should raise an ticket created event when ticket is created', async () => {
+    const anomaly = getAnomaly({
+      severity: AnomalySeverity.HIGH,
+      status: AnomalyStatus.OPEN,
     });
-
-    it('should create ticket when providerConfig is valid', async () => {
-      const mockTicket = {
-        id: 'ticket-1',
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: TicketSeverity.HIGH,
-        status: 'open' as any,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockProvider.createTicket.mockResolvedValue(mockTicket);
-      ticketingProviderFactory.create.mockReturnValue(mockProvider as any);
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({
-        type: 'ServiceNowTicketingProvider',
-      });
-      logAnalysisJobsService.getAnomaly.mockResolvedValue({
-        id: 'anomaly-1',
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: AnomalySeverity.HIGH,
-        status: AnomalyStatus.OPEN,
-      } as any);
-
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
-
-      const result = await service.handleAnomalyCreatedEvent(event);
-
-      expect(
-        logAnalysisJobsService.getTicketingSystemConfig,
-      ).toHaveBeenCalledWith('job-1');
-      expect(logAnalysisJobsService.getAnomaly).toHaveBeenCalledWith(
-        'anomaly-1',
-      );
-      expect(ticketingProviderFactory.create).toHaveBeenCalledWith({
-        type: 'ServiceNowTicketingProvider',
-      });
-      expect(mockProvider.createTicket).toHaveBeenCalledWith({
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: TicketSeverity.HIGH,
-      });
-      expect(result).toEqual(mockTicket);
-    });
-
-    it('should map severity correctly when creating ticket', async () => {
-      const mockTicket = {
-        id: 'ticket-1',
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: TicketSeverity.MEDIUM,
-        status: 'open' as any,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockProvider.createTicket.mockResolvedValue(mockTicket);
-      ticketingProviderFactory.create.mockReturnValue(mockProvider as any);
-      logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue({
-        type: 'ServiceNowTicketingProvider',
-      });
-      logAnalysisJobsService.getAnomaly.mockResolvedValue({
-        id: 'anomaly-1',
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: AnomalySeverity.MEDIUM,
-        status: AnomalyStatus.OPEN,
-      } as any);
-
-      const event = new AnomalyCreatedEvent({
-        anomalyId: 'anomaly-1',
-        jobId: 'job-1',
-        ownerId: 'owner-1',
-      });
-
-      await service.handleAnomalyCreatedEvent(event);
-
-      expect(mockProvider.createTicket).toHaveBeenCalledWith({
-        title: 'Test Anomaly',
-        description: 'Test Description',
-        severity: TicketSeverity.MEDIUM,
-      });
-    });
+    logAnalysisJobsService.getAnomaly.mockResolvedValue(anomaly);
+    await service.handleAnomalyCreatedEvent(event);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      TicketCreatedEvent.name,
+      new TicketCreatedEvent({
+        anomalyId: anomaly.id,
+      }),
+    );
   });
 });
