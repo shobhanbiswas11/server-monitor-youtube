@@ -12,9 +12,12 @@ export class MonitoringService {
   @OnEvent(TicketCreatedEvent.name)
   async handleTicketCreation(event: TicketCreatedEvent) {
     const { anomalyId } = event.payload;
-    const { server, ticket } =
-      await this.ticketCreationContextQuery.execute(anomalyId);
 
-    //
+    (await this.ticketCreationContextQuery.execute(anomalyId)).match(
+      ({ ticket, server }) => {
+        // do the logic
+      },
+      (err) => {},
+    );
   }
 }

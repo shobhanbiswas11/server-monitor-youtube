@@ -29,6 +29,9 @@ export class RemoteServer {
   @Column({ type: 'simple-json' })
   config: Record<string, any>;
 
+  @Column({ default: false })
+  isConnectionConfigured: boolean;
+
   @Column({ default: RemoteServerStatus.UNKNOWN })
   status: RemoteServerStatus;
 
