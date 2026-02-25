@@ -16,9 +16,11 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:cov": "vitest --coverage",
-    "test:e2e": "vitest --config ./vitest-e2e.config.ts"
+    "test:e2e": "vitest --config ./vitest-e2e.config.ts",
+    "test:integration": "vitest --config ./vitest-integration.config.ts"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.3.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/event-emitter": "^3.0.1",
