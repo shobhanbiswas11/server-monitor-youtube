@@ -56,7 +56,9 @@ export class LogAnalysisJob {
   @ManyToOne(() => LogSource, { nullable: true })
   logSource?: LogSource;
 
-  @ManyToOne(() => RemoteServer)
+  @ManyToOne(() => RemoteServer, {
+    onDelete: 'CASCADE',
+  })
   remoteServer: RemoteServer;
 
   @OneToMany(() => Anomaly, (anomaly) => anomaly.logAnalysisJob)
