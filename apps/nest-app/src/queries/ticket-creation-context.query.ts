@@ -53,10 +53,6 @@ export class TicketCreationContextQuery {
 
       const server = anomaly.logAnalysisJob.remoteServer;
 
-      if (!server) {
-        return err('SERVER_NOT_FOUND' as const);
-      }
-
       const result: TicketCreationContext = {
         ticket: anomaly.ticketInfo as Ticket,
         server: {
