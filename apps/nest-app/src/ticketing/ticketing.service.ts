@@ -1,37 +1,37 @@
-import {
-  AnomalySeverity,
-  AnomalyStatus,
-  LogAnalysisJobsService,
-} from '@/log-analysis';
+import { AnomalySeverity, AnomalyStatus } from '@/log-analysis';
+import { AnomalyContextQuery } from '@/queries';
 import { AnomalyCreatedEvent, TicketCreatedEvent } from '@/shared/events';
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 as EventEmitter, OnEvent } from '@nestjs/event-emitter';
 import { TicketingProviderFactory } from './ticketing-providers/ticketing-provider.factory';
-import { TicketSeverity } from './ticketing.types';
+import { Ticket, TicketSeverity } from './ticketing.types';
 
 @Injectable()
 export class TicketingService {
   constructor(
     private readonly ticketingProviderFactory: TicketingProviderFactory,
-    private readonly logAnalysisJobsService: LogAnalysisJobsService,
+    private readonly anomalyContextQuery: AnomalyContextQuery,
     private readonly eventEmitter: EventEmitter,
   ) {}
 
   @OnEvent(AnomalyCreatedEvent.name)
   async handleAnomalyCreatedEvent(event: AnomalyCreatedEvent) {
-    const { anomalyId, jobId } = event.payload;
+    const res = await this.anomalyContextQuery.execute(event.payload.anomalyId);
 
-    const providerConfig =
-      await this.logAnalysisJobsService.getTicketingSystemConfig(jobId);
-    // If provider config & type is not set, return early
+    if (res.isErr()) {
+      // TODO: Handle error
+      return;
+    }
+
+    const { anomaly, ticketingSystemConfig: providerConfig } = res.value;
+
     if (!providerConfig?.type) {
+      // TODO: Handle error
       return;
     }
 
     const provider = this.ticketingProviderFactory.create(providerConfig);
-    const anomaly = await this.logAnalysisJobsService.getAnomaly(anomalyId);
-
-    if (!anomaly || anomaly.status !== AnomalyStatus.OPEN) {
+    if (anomaly.status !== AnomalyStatus.OPEN) {
       return;
     }
 
@@ -44,7 +44,7 @@ export class TicketingService {
     this.eventEmitter.emit(
       TicketCreatedEvent.name,
       new TicketCreatedEvent({
-        anomalyId,
+        anomalyId: anomaly.id,
       }),
     );
   }
@@ -62,5 +62,12 @@ export class TicketingService {
       default:
         return TicketSeverity.LOW;
     }
+  }
+
+  async updateTicket(
+    ticketId: string,
+    props: Pick<Ticket, 'title' | 'description' | 'status'>,
+  ) {
+    throw new Error('Not implemented');
   }
 }
