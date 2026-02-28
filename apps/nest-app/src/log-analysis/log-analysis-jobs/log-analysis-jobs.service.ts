@@ -122,8 +122,6 @@ export class LogAnalysisJobsService {
     this.eventEmitter.emit(
       AnomalyCreatedEvent.name,
       new AnomalyCreatedEvent({
-        ownerId: job.ownerId,
-        jobId: job.id,
         anomalyId: anomaly.id,
       }),
     );
