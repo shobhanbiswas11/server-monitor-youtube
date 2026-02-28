@@ -3,6 +3,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
+import { LlmModule } from './llm/llm.module';
 import { LogAnalysisModule } from './log-analysis/log-analysis.module';
 import { LogSourcesModule } from './log-sources/log-sources.module';
 import { QueriesModule } from './queries';
@@ -20,8 +21,8 @@ import { UsersModule } from './users/users.module';
     LogAnalysisModule,
     EventEmitterModule.forRoot(),
     TicketingModule,
-    DatabaseModule,
     QueriesModule,
+    LlmModule,
   ],
   controllers: [AppController],
 })
