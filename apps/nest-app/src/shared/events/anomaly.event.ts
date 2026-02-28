@@ -1,8 +1,6 @@
 import { AppEvent } from './app-event';
 
 export interface AnomalyCreatedEventPayload {
-  ownerId: string;
-  jobId: string;
   anomalyId: string;
 }
 
